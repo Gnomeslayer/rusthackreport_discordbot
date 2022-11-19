@@ -16,8 +16,61 @@ class RustHackReport(commands.Cog):
     
     @commands.Cog.listener()
     async def on_ready(self):
+        print("Getting rules")
+        rules = await self.get_rules()
+        print("Deleting rules")
+        await self.delete_all_rules(rules)
+        print("Setting rules")
+        await self.set_rules()
+        print("Starting twitter stream")
         await self.twitter_stream()
-        
+    
+    async def get_rules(self):
+        bearer_token = self.config['twitter_token']
+        auth = {
+            "Authorization": f"Bearer {bearer_token}",
+            "User-Agent": "v2FilteredStreamPython"
+        }
+        url = "https://api.twitter.com/2/tweets/search/stream/rules"
+        async with aiohttp.ClientSession(headers=auth) as session:
+                async with session.get(url=url) as r:
+                    response = await r.json()
+        return response
+    
+    async def delete_all_rules(self, rules):
+        if rules is None or "data" not in rules:
+            return None
+
+        ids = list(map(lambda rule: rule["id"], rules["data"]))
+        payload = {"delete": {"ids": ids}}
+        bearer_token = self.config['twitter_token']
+        auth = {
+            "Authorization": f"Bearer {bearer_token}",
+            "User-Agent": "v2FilteredStreamPython"
+        }
+        url = "https://api.twitter.com/2/tweets/search/stream/rules"
+        async with aiohttp.ClientSession(headers=auth) as session:
+                async with session.get(url=url, json=payload) as r:
+                    response = await r.json()
+        return response
+
+
+    async def set_rules(self):
+        # You can adjust the rules if needed
+        sample_rules = [
+            {"value": "from:rusthackreport"},
+        ]
+        payload = {"add": sample_rules}
+        bearer_token = self.config['twitter_token']
+        auth = {
+            "Authorization": f"Bearer {bearer_token}",
+            "User-Agent": "v2FilteredStreamPython"
+        }
+        url = "https://api.twitter.com/2/tweets/search/stream/rules"
+        async with aiohttp.ClientSession(headers=auth) as session:
+                async with session.get(url=url, json=payload) as r:
+                    response = await r.json()
+        return response
     async def twitter_stream(self):
         bearer_token = self.config['twitter_token']
         auth = {
